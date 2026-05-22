@@ -1,0 +1,1069 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hermes — Your Workspace</title>
+<link href="https://fonts.googleapis.com/css2?family=Berkeley+Mono&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0c0c0e;
+    --s1: #111114;
+    --s2: #18181c;
+    --s3: #222228;
+    --s4: #2a2a32;
+    --bd: #ffffff0a;
+    --bd2: #ffffff14;
+    --bd3: #ffffff20;
+    --tx: #f2f2f5;
+    --t1: #c8c8d4;
+    --t2: #8888a0;
+    --t3: #44445a;
+    --red: #e63946;
+    --rF: #e6394610;
+    --rM: #e6394628;
+    --grn: #34d399;
+    --gF: #34d39910;
+    --amb: #fbbf24;
+    --aF: #fbbf2410;
+    --blu: #60a5fa;
+    --bF: #60a5fa10;
+    --sans: 'Instrument Sans', system-ui, sans-serif;
+    --mono: 'Berkeley Mono', 'JetBrains Mono', monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--tx); font-family: var(--sans); font-size: 13px; height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
+  ::-webkit-scrollbar { width: 3px; height: 3px; }
+  ::-webkit-scrollbar-thumb { background: var(--bd2); border-radius: 3px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes rise { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: none; } }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .3; } }
+
+  /* ── Topbar ── */
+  .topbar { background: var(--s1); border-bottom: 1px solid var(--bd); height: 46px; display: flex; align-items: center; padding: 0 16px; gap: 12px; flex-shrink: 0; }
+  .logo { width: 28px; height: 28px; border-radius: 50%; background: var(--red); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: #fff; font-family: var(--mono); flex-shrink: 0; }
+  .wordmark { font-size: 14px; font-weight: 600; letter-spacing: -0.02em; color: var(--tx); }
+  .nav-sep { width: 1px; height: 18px; background: var(--bd); }
+  .nav-btn { padding: 4px 10px; border-radius: 6px; border: none; background: none; color: var(--t2); font-size: 12px; font-family: var(--sans); cursor: pointer; transition: all .12s; font-weight: 500; }
+  .nav-btn:hover { background: var(--s3); color: var(--t1); }
+  .nav-btn.active { background: var(--s3); color: var(--tx); }
+  .spacer { flex: 1; }
+  .status-pill { display: flex; align-items: center; gap: 5px; padding: 4px 10px; background: var(--s2); border: 1px solid var(--bd); border-radius: 20px; font-size: 11px; color: var(--t2); }
+  .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--grn); animation: pulse 2.5s ease-in-out infinite; }
+  .clock { font-size: 11px; color: var(--t3); font-family: var(--mono); }
+
+  /* ── Views ── */
+  .view { display: none; flex: 1; overflow: hidden; }
+  .view.active { display: flex; }
+
+  /* ── Projects Grid ── */
+  #projects-view { flex-direction: column; overflow-y: auto; padding: 24px; gap: 20px; }
+  .projects-header { display: flex; justify-content: space-between; align-items: flex-start; }
+  .projects-title { font-size: 20px; font-weight: 600; letter-spacing: -0.03em; margin-bottom: 3px; }
+  .projects-sub { font-size: 12px; color: var(--t3); }
+  .btn-primary { padding: 8px 16px; background: var(--red); border: none; color: #fff; border-radius: 8px; font-size: 12px; font-weight: 600; font-family: var(--sans); cursor: pointer; letter-spacing: 0.01em; transition: opacity .15s; }
+  .btn-primary:hover { opacity: .88; }
+  .btn-ghost { padding: 7px 13px; background: none; border: 1px solid var(--bd2); color: var(--t2); border-radius: 7px; font-size: 12px; font-family: var(--sans); cursor: pointer; transition: all .12s; }
+  .btn-ghost:hover { border-color: var(--bd3); color: var(--t1); background: var(--s2); }
+  .projects-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+  .proj-card { background: var(--s1); border: 1px solid var(--bd); border-radius: 12px; overflow: hidden; cursor: pointer; transition: all .15s; position: relative; }
+  .proj-card:hover { border-color: var(--bd2); transform: translateY(-1px); }
+  .proj-card-thumb { height: 130px; background: var(--s2); overflow: hidden; position: relative; display: flex; align-items: center; justify-content: center; }
+  .proj-card-thumb img { width: 100%; height: 100%; object-fit: cover; object-position: top; }
+  .proj-card-thumb-empty { font-size: 32px; opacity: .08; }
+  .proj-card-count { position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,.6); border-radius: 4px; padding: 2px 7px; font-size: 10px; color: var(--t2); font-family: var(--mono); }
+  .proj-card-body { padding: 13px 14px; }
+  .proj-card-emoji { font-size: 16px; margin-bottom: 6px; }
+  .proj-card-name { font-size: 14px; font-weight: 600; letter-spacing: -0.01em; margin-bottom: 3px; }
+  .proj-card-desc { font-size: 11px; color: var(--t2); line-height: 1.5; margin-bottom: 10px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  .proj-card-bar { height: 3px; background: var(--s4); border-radius: 2px; margin-bottom: 6px; }
+  .proj-card-fill { height: 100%; border-radius: 2px; transition: width .4s; }
+  .proj-card-meta { display: flex; justify-content: space-between; font-size: 10px; color: var(--t3); }
+  .proj-card-accent { position: absolute; top: 0; left: 0; right: 0; height: 2px; }
+
+  /* ── Project Workspace ── */
+  #workspace-view { flex-direction: row; }
+  .ws-left { width: 260px; background: var(--s1); border-right: 1px solid var(--bd); display: flex; flex-direction: column; flex-shrink: 0; overflow: hidden; }
+  .ws-center { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+  .ws-right { width: 300px; background: var(--s1); border-left: 1px solid var(--bd); display: flex; flex-direction: column; flex-shrink: 0; overflow: hidden; }
+
+  .panel-header { padding: 12px 14px; border-bottom: 1px solid var(--bd); flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; }
+  .panel-title { font-size: 11px; font-weight: 600; color: var(--t2); letter-spacing: .06em; text-transform: uppercase; }
+  .panel-action { width: 22px; height: 22px; border-radius: 5px; background: none; border: 1px solid var(--bd2); color: var(--t2); font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all .12s; }
+  .panel-action:hover { background: var(--s3); color: var(--t1); }
+
+  .storage-tabs { display: flex; border-bottom: 1px solid var(--bd); flex-shrink: 0; }
+  .stab { flex: 1; padding: 8px 4px; border: none; background: none; font-size: 11px; font-family: var(--sans); color: var(--t3); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: all .12s; font-weight: 500; }
+  .stab.active { color: var(--tx); border-bottom-color: var(--red); }
+
+  .storage-content { flex: 1; overflow-y: auto; padding: 10px; }
+
+  .asset-item { display: flex; align-items: center; gap: 9px; padding: 8px 9px; border-radius: 7px; cursor: pointer; transition: background .1s; border: 1px solid transparent; margin-bottom: 3px; }
+  .asset-item:hover { background: var(--s2); border-color: var(--bd); }
+  .asset-item.active { background: var(--s2); border-color: var(--bd2); }
+  .asset-icon { width: 32px; height: 32px; border-radius: 6px; background: var(--s3); display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; overflow: hidden; }
+  .asset-icon img { width: 100%; height: 100%; object-fit: cover; }
+  .asset-info { flex: 1; min-width: 0; }
+  .asset-name { font-size: 12px; color: var(--t1); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 1px; }
+  .asset-meta { font-size: 10px; color: var(--t3); font-family: var(--mono); }
+  .asset-del { width: 18px; height: 18px; border-radius: 3px; background: none; border: none; color: var(--t3); font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity .1s; flex-shrink: 0; }
+  .asset-item:hover .asset-del { opacity: 1; }
+  .asset-del:hover { color: var(--red); }
+
+  .drop-zone { border: 2px dashed var(--bd2); border-radius: 9px; padding: 18px 12px; text-align: center; cursor: pointer; transition: all .15s; margin-bottom: 8px; }
+  .drop-zone:hover, .drop-zone.drag-over { border-color: var(--red); background: var(--rF); }
+  .drop-zone-icon { font-size: 22px; opacity: .3; margin-bottom: 6px; }
+  .drop-zone-text { font-size: 11px; color: var(--t3); line-height: 1.6; }
+  .drop-zone-text strong { color: var(--t2); display: block; margin-bottom: 2px; }
+
+  .url-input-wrap { display: flex; gap: 5px; margin-bottom: 8px; }
+  .url-input { flex: 1; padding: 6px 9px; background: var(--s2); border: 1px solid var(--bd); color: var(--tx); border-radius: 6px; font-size: 11px; font-family: var(--mono); outline: none; }
+  .url-input:focus { border-color: var(--red); }
+  .url-add-btn { padding: 6px 10px; background: var(--s3); border: 1px solid var(--bd2); color: var(--t1); border-radius: 6px; font-size: 11px; cursor: pointer; font-family: var(--sans); transition: all .12s; white-space: nowrap; }
+  .url-add-btn:hover { background: var(--s4); }
+
+  .gh-download { background: var(--s2); border: 1px solid var(--bd); border-radius: 8px; padding: 12px; margin-bottom: 8px; }
+  .gh-download-title { font-size: 11px; font-weight: 600; color: var(--t1); margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
+  .gh-download-sub { font-size: 10px; color: var(--t3); margin-bottom: 10px; line-height: 1.5; font-family: var(--mono); }
+  .gh-download-btn { width: 100%; padding: 7px; background: var(--s3); border: 1px solid var(--bd2); color: var(--t1); border-radius: 6px; font-size: 11px; font-family: var(--sans); cursor: pointer; font-weight: 500; transition: all .12s; display: flex; align-items: center; justify-content: center; gap: 6px; text-decoration: none; }
+  .gh-download-btn:hover { background: var(--s4); border-color: var(--bd3); }
+
+  .code-file-item { padding: 7px 10px; border-radius: 6px; cursor: pointer; margin-bottom: 2px; transition: background .1s; display: flex; align-items: center; gap: 8px; }
+  .code-file-item:hover { background: var(--s2); }
+  .code-file-item.active { background: var(--s2); border: 1px solid var(--bd2); }
+  .code-ext { font-size: 9px; font-family: var(--mono); width: 26px; text-align: right; flex-shrink: 0; }
+  .code-path { font-size: 11px; color: var(--t1); font-family: var(--mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  .ws-proj-header { padding: 14px 18px 12px; border-bottom: 1px solid var(--bd); flex-shrink: 0; }
+  .ws-proj-top { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
+  .ws-proj-emoji { font-size: 22px; }
+  .ws-proj-name { font-size: 16px; font-weight: 600; letter-spacing: -0.02em; }
+  .ws-proj-links { display: flex; gap: 5px; flex-wrap: wrap; }
+  .link-chip { padding: 3px 9px; background: none; border: 1px solid var(--bd2); color: var(--t2); border-radius: 4px; font-size: 10px; text-decoration: none; font-family: var(--mono); transition: all .12s; cursor: pointer; display: inline-flex; align-items: center; gap: 3px; }
+  .link-chip:hover { border-color: var(--bd3); color: var(--t1); }
+  .ws-tabs { display: flex; border-bottom: 1px solid var(--bd); flex-shrink: 0; }
+  .ws-tab { padding: 8px 14px; border: none; background: none; font-size: 12px; font-family: var(--sans); color: var(--t2); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: color .12s; white-space: nowrap; font-weight: 500; }
+  .ws-tab.active { color: var(--tx); border-bottom-color: var(--red); }
+
+  .code-viewer { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  .code-viewer-bar { padding: 8px 14px; border-bottom: 1px solid var(--bd); font-size: 11px; color: var(--t3); font-family: var(--mono); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; background: var(--s1); }
+  .code-content { flex: 1; overflow: auto; padding: 14px; }
+  pre { font-family: var(--mono); font-size: 11px; line-height: 1.7; color: var(--t1); white-space: pre; background: transparent; }
+
+  .gallery-grid { flex: 1; overflow-y: auto; padding: 14px; display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 8px; align-content: start; }
+  .gallery-item { border-radius: 8px; overflow: hidden; border: 1px solid var(--bd); position: relative; cursor: pointer; transition: border-color .1s; }
+  .gallery-item:hover { border-color: var(--bd2); }
+  .gallery-item img { width: 100%; aspect-ratio: 16/10; object-fit: cover; object-position: top; display: block; }
+  .gallery-item-label { padding: 5px 8px; font-size: 10px; color: var(--t2); background: var(--s2); border-top: 1px solid var(--bd); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .gallery-del { position: absolute; top: 5px; right: 5px; width: 20px; height: 20px; border-radius: 4px; background: rgba(0,0,0,.7); border: none; color: var(--t2); font-size: 12px; cursor: pointer; display: none; align-items: center; justify-content: center; }
+  .gallery-item:hover .gallery-del { display: flex; }
+  .gallery-del:hover { color: var(--red); }
+
+  .chat-messages { flex: 1; overflow-y: auto; padding: 14px 14px 8px; display: flex; flex-direction: column; gap: 14px; }
+  .chat-msg { animation: rise .2s ease; }
+  .chat-msg-role { font-size: 10px; font-weight: 600; margin-bottom: 4px; display: flex; align-items: center; gap: 4px; }
+  .chat-msg-bubble { background: var(--s2); border: 1px solid var(--bd); border-radius: 10px; padding: 9px 11px; font-size: 12px; line-height: 1.7; color: var(--t1); white-space: pre-wrap; }
+  .chat-msg-bubble.user-bubble { background: transparent; border: none; padding: 0; color: var(--t2); font-size: 12px; }
+  .step-log { background: var(--bg); border: 1px solid var(--bd); border-radius: 7px; padding: 9px 11px; margin-top: 8px; max-height: 120px; overflow-y: auto; }
+  .step-line { font-size: 10px; font-family: var(--mono); color: var(--t3); margin-bottom: 3px; line-height: 1.5; display: flex; gap: 7px; }
+  .step-line.ok { color: var(--grn); }
+  .step-line.warn { color: var(--amb); }
+  .proof-grid { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--gF); border-radius: 7px; overflow: hidden; margin-top: 8px; }
+  .proof-label { padding: 4px 8px; font-size: 9px; font-family: var(--mono); border-bottom: 1px solid var(--bd); }
+  .proof-img { height: 80px; overflow: hidden; background: var(--s2); }
+  .proof-img img { width: 100%; height: 100%; object-fit: cover; object-position: top; display: block; }
+  .chat-input-area { padding: 10px 12px; border-top: 1px solid var(--bd); flex-shrink: 0; }
+  .chat-input-wrap { display: flex; gap: 6px; align-items: flex-end; background: var(--s2); border: 1px solid var(--bd); border-radius: 10px; padding: 8px 10px; }
+  .chat-input-wrap:focus-within { border-color: var(--bd3); }
+  .chat-textarea { flex: 1; resize: none; background: none; border: none; color: var(--tx); font-size: 12px; font-family: var(--sans); line-height: 1.5; max-height: 100px; height: 18px; outline: none; }
+  .chat-send { width: 28px; height: 28px; border-radius: 7px; background: var(--red); border: none; color: #fff; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: opacity .15s; }
+  .chat-send:disabled { opacity: .4; cursor: not-allowed; }
+  .chat-send:hover:not(:disabled) { opacity: .85; }
+
+  .suggestions { padding: 0 12px 8px; display: flex; gap: 5px; flex-wrap: wrap; }
+  .sug-btn { padding: 5px 10px; background: var(--s2); border: 1px solid var(--bd); color: var(--t2); border-radius: 20px; font-size: 11px; font-family: var(--sans); cursor: pointer; transition: all .12s; white-space: nowrap; }
+  .sug-btn:hover { border-color: var(--bd3); color: var(--t1); }
+
+  .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: flex; align-items: center; justify-content: center; z-index: 100; backdrop-filter: blur(4px); }
+  .modal { background: var(--s1); border: 1px solid var(--bd2); border-radius: 14px; padding: 24px; width: 400px; box-shadow: 0 24px 60px rgba(0,0,0,.5); }
+  .modal-title { font-size: 16px; font-weight: 600; letter-spacing: -0.02em; margin-bottom: 4px; }
+  .modal-sub { font-size: 12px; color: var(--t3); margin-bottom: 18px; }
+  .field-label { font-size: 11px; font-weight: 500; color: var(--t2); margin-bottom: 4px; display: block; }
+  .field-input { width: 100%; padding: 8px 10px; background: var(--s2); border: 1px solid var(--bd); color: var(--tx); border-radius: 7px; font-size: 12px; font-family: var(--sans); outline: none; margin-bottom: 12px; }
+  .field-input:focus { border-color: var(--red); }
+  textarea.field-input { height: 60px; resize: none; font-family: var(--sans); }
+  .modal-row { display: flex; gap: 7px; margin-top: 4px; }
+
+  .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 36px 20px; text-align: center; gap: 8px; flex: 1; }
+  .empty-icon { font-size: 32px; opacity: .12; }
+  .empty-title { font-size: 13px; font-weight: 500; color: var(--t2); }
+  .empty-sub { font-size: 11px; color: var(--t3); line-height: 1.6; }
+</style>
+</head>
+<body>
+
+<!-- Topbar -->
+<div class="topbar">
+  <div class="logo">H</div>
+  <div class="wordmark">Hermes</div>
+  <div class="nav-sep"></div>
+  <button class="nav-btn active" id="nav-projects" onclick="showView('projects')">Projects</button>
+  <button class="nav-btn" id="nav-ws-btn" onclick="showView('workspace')" style="display:none">Workspace</button>
+  <div class="spacer"></div>
+  <div class="status-pill">
+    <div class="status-dot" id="sdot"></div>
+    <span id="slabel" style="font-size:11px">ready</span>
+  </div>
+  <div class="clock" id="clock"></div>
+</div>
+
+<!-- PROJECTS VIEW -->
+<div class="view active" id="projects-view">
+  <div class="projects-header">
+    <div>
+      <div class="projects-title">Your Projects</div>
+      <div class="projects-sub" id="proj-sub">Storage · Code · Screenshots · Everything in one place</div>
+    </div>
+    <button class="btn-primary" onclick="openNewProjectModal()">+ New Project</button>
+  </div>
+  <div class="projects-grid" id="projects-grid"></div>
+</div>
+
+<!-- WORKSPACE VIEW -->
+<div class="view" id="workspace-view">
+  <!-- Left: Storage Panel -->
+  <div class="ws-left">
+    <div class="panel-header">
+      <div class="panel-title" id="ws-proj-label">Storage</div>
+      <div style="display:flex;gap:4px">
+        <button class="panel-action" onclick="openEditProjectModal()" title="Edit project" style="font-size:11px">✏</button>
+        <button class="panel-action" onclick="confirmDeleteProject()" title="Delete project" style="font-size:11px;color:var(--red);border-color:var(--red)30">🗑</button>
+        <button class="panel-action" onclick="showView('projects')" title="All projects" style="font-size:11px">←</button>
+      </div>
+    </div>
+    <div class="storage-tabs">
+      <button class="stab active" onclick="switchStorageTab('images')">Images</button>
+      <button class="stab" onclick="switchStorageTab('urls')">URLs</button>
+      <button class="stab" onclick="switchStorageTab('code')">Code</button>
+    </div>
+    <div class="storage-content" id="storage-content"></div>
+  </div>
+
+  <!-- Center: Work Area -->
+  <div class="ws-center">
+    <div class="ws-proj-header">
+      <div class="ws-proj-top">
+        <div class="ws-proj-emoji" id="ws-emoji"></div>
+        <div class="ws-proj-name" id="ws-name"></div>
+      </div>
+      <div class="ws-proj-links" id="ws-links"></div>
+    </div>
+    <div class="ws-tabs">
+      <button class="ws-tab active" onclick="switchWorkTab('gallery')">Gallery</button>
+      <button class="ws-tab" onclick="switchWorkTab('code')">Code Viewer</button>
+      <button class="ws-tab" onclick="switchWorkTab('tasks')">Tasks</button>
+    </div>
+    <div id="work-area" style="flex:1;display:flex;flex-direction:column;overflow:hidden"></div>
+  </div>
+
+  <!-- Right: Hermes Chat -->
+  <div class="ws-right">
+    <div class="panel-header">
+      <div style="display:flex;align-items:center;gap:7px">
+        <div class="logo" style="width:22px;height:22px;font-size:10px">H</div>
+        <div class="panel-title">Hermes</div>
+      </div>
+      <button class="panel-action" onclick="clearChat()" title="Clear chat" style="font-size:10px">✕</button>
+    </div>
+    <div class="chat-messages" id="chat-messages"></div>
+    <div class="suggestions" id="suggestions"></div>
+    <div class="chat-input-area">
+      <div class="chat-input-wrap">
+        <textarea class="chat-textarea" id="chat-input" placeholder="Talk to Hermes..." onkeydown="chatKeydown(event)" oninput="autoResize(this)"></textarea>
+        <button class="chat-send" id="chat-send" onclick="sendChat()">↑</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modals -->
+<div class="modal-bg" id="new-project-modal" style="display:none" onclick="if(event.target===this)closeModal('new-project-modal')">
+  <div class="modal">
+    <div class="modal-title">New Project</div>
+    <div class="modal-sub">Your workspace — storage, code, screenshots, everything.</div>
+    <label class="field-label">Name</label>
+    <input class="field-input" id="np-name" placeholder="BAIA BackOffice">
+    <label class="field-label">Emoji</label>
+    <input class="field-input" id="np-emoji" placeholder="🏝" maxlength="2" style="width:70px">
+    <label class="field-label">Description</label>
+    <textarea class="field-input" id="np-desc" placeholder="What does this project do?"></textarea>
+    <label class="field-label">GitHub repo</label>
+    <input class="field-input" id="np-github" placeholder="org/repo-name" style="font-family:var(--mono)">
+    <label class="field-label">Live URL</label>
+    <input class="field-input" id="np-vercel" placeholder="myapp.vercel.app" style="font-family:var(--mono)">
+    <div class="modal-row">
+      <button class="btn-primary" style="flex:1" onclick="createProject()">Create Project</button>
+      <button class="btn-ghost" onclick="closeModal('new-project-modal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="edit-project-modal" style="display:none" onclick="if(event.target===this)closeModal('edit-project-modal')">
+  <div class="modal">
+    <div class="modal-title">Edit Project</div>
+    <div class="modal-sub">Update your project details.</div>
+    <label class="field-label">Name</label>
+    <input class="field-input" id="ep-name">
+    <label class="field-label">Emoji</label>
+    <input class="field-input" id="ep-emoji" maxlength="2" style="width:70px">
+    <label class="field-label">Description</label>
+    <textarea class="field-input" id="ep-desc"></textarea>
+    <label class="field-label">GitHub repo</label>
+    <input class="field-input" id="ep-github" style="font-family:var(--mono)">
+    <label class="field-label">Live URL</label>
+    <input class="field-input" id="ep-vercel" style="font-family:var(--mono)">
+    <div class="modal-row">
+      <button class="btn-primary" style="flex:1" onclick="saveEditProject()">Save Changes</button>
+      <button class="btn-ghost" onclick="closeModal('edit-project-modal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="file-input" style="display:none" multiple accept="image/*" onchange="handleFileUpload(event)">
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script>
+// ── Supabase ──────────────────────────────────────────────────────────────
+const SUPABASE_URL = "https://tsnitufhjyvmhwlwqsdm.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRzbml0dWZoanl2bWh3bHdxc2RtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkzOTYwOTAsImV4cCI6MjA5NDk3MjA5MH0.xuqwvgoUEkxuPAyDwGMphMLwfCKJ9t3ysKzjGhKH_p0";
+window.__sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+window.__BUCKET = "hermes-assets";
+
+// ── Config ────────────────────────────────────────────────────────────────
+const GH = "";
+
+// ── State ─────────────────────────────────────────────────────────────────
+const DEFAULT_PROJECTS = [
+  { id:"baia",  name:"BAIA BackOffice",   emoji:"🏝",  desc:"Resort OS — reception, kitchen, bar, housekeeping", github:"digitalnativepalawan/baia-backoffice",  vercel:"baia-backoffice.vercel.app",  color:"#34d399", images:[], urls:[], codeFiles:[], tasks:[{id:"b1",label:"Sirvoy webhook",note:"live booking sync",done:false},{id:"b2",label:"QR payment",note:"GCash + Vincent API",done:false},{id:"b3",label:"Housekeeping board",done:true},{id:"b4",label:"Kitchen POS",done:true}] },
+  { id:"pinoy", name:"PinoyLink",          emoji:"🇵🇭", desc:"Filipino-first link-in-bio platform",               github:"digitalnativepalawan/pinoy-link-ph",    vercel:"pinoy.link",                 color:"#fbbf24", images:[], urls:[], codeFiles:[], tasks:[{id:"p1",label:"GCash/Maya modal",note:"the money hook",done:false},{id:"p2",label:"EN/FIL toggle",note:"feels personal",done:false},{id:"p3",label:"Filipino templates",done:true},{id:"p4",label:"32 social icons",done:true}] },
+  { id:"merq",  name:"merQato.digital",    emoji:"⚡",  desc:"Agency portfolio & product showcase",               github:"digitalnativepalawan/merqato-digital",  vercel:"merqato.digital",            color:"#e63946", images:[], urls:[], codeFiles:[], tasks:[{id:"m1",label:"6 product cards",note:"show the portfolio",done:false},{id:"m2",label:"WhatsApp CTA",note:"primary conversion",done:false},{id:"m3",label:"Homepage hero",done:true}] },
+];
+
+let state = {
+  projects: DEFAULT_PROJECTS,
+  activeProjectId: null,
+  storageTab: "images",
+  workTab: "gallery",
+  chatHistory: [],
+  thinking: false,
+  agentBusy: false,
+  activeCodeFile: null,
+  runs: {},
+};
+
+// ── Supabase sync ─────────────────────────────────────────────────────────
+let _saveTimer = null;
+let _booted = false;
+
+function save() {
+  if (!_booted || !window.__sb) return;
+  clearTimeout(_saveTimer);
+  _saveTimer = setTimeout(async () => {
+    try {
+      await window.__sb.from("hermes_state").upsert({ id:"main", data:{ projects: state.projects }, updated_at: new Date().toISOString() });
+    } catch(e) { console.error("save failed", e); }
+  }, 400);
+}
+
+async function load() {
+  try {
+    const { data } = await window.__sb.from("hermes_state").select("data").eq("id","main").maybeSingle();
+    const d = data?.data || {};
+    if (d.projects?.length) state.projects = d.projects;
+    else await window.__sb.from("hermes_state").upsert({ id:"main", data:{ projects: DEFAULT_PROJECTS }, updated_at: new Date().toISOString() });
+  } catch(e) { console.error("load failed", e); }
+  _booted = true;
+}
+
+async function uploadImageFile(file) {
+  const safe = file.name.replace(/[^a-zA-Z0-9._-]/g,"_");
+  const path = `images/${Date.now()}-${Math.random().toString(36).slice(2,8)}-${safe}`;
+  const { error } = await window.__sb.storage.from(window.__BUCKET).upload(path, file, { contentType: file.type, upsert: false });
+  if (error) throw error;
+  const { data } = window.__sb.storage.from(window.__BUCKET).getPublicUrl(path);
+  return { url: data.publicUrl, path };
+}
+window.__uploadImageFile = uploadImageFile;
+
+function proj() { return state.projects.find(p=>p.id===state.activeProjectId); }
+
+// ── Clock ─────────────────────────────────────────────────────────────────
+setInterval(() => {
+  const el = document.getElementById("clock");
+  if (el) el.textContent = new Date().toLocaleTimeString("en-US",{hour12:false,hour:"2-digit",minute:"2-digit",second:"2-digit"});
+}, 1000);
+
+// ── Views ─────────────────────────────────────────────────────────────────
+function showView(v) {
+  document.querySelectorAll(".view").forEach(el => el.classList.remove("active"));
+  document.querySelectorAll(".nav-btn").forEach(el => el.classList.remove("active"));
+  document.getElementById(v+"-view")?.classList.add("active");
+  if (v === "projects") {
+    document.getElementById("nav-projects")?.classList.add("active");
+    renderProjectsGrid();
+  } else {
+    const wb = document.getElementById("nav-ws-btn");
+    if (wb) { wb.style.display=""; wb.classList.add("active"); }
+    renderWorkspace();
+  }
+}
+window.showView = showView;
+
+// ── Projects Grid ─────────────────────────────────────────────────────────
+function renderProjectsGrid() {
+  const g = document.getElementById("projects-grid");
+  const sub = document.getElementById("proj-sub");
+  const totalImages = state.projects.reduce((n,p)=>n+(p.images||[]).length,0);
+  const totalUrls = state.projects.reduce((n,p)=>n+(p.urls||[]).length,0);
+  sub.textContent = state.projects.length+" projects · "+totalImages+" images · "+totalUrls+" URLs stored";
+  g.innerHTML = "";
+  state.projects.forEach(p => {
+    const done = (p.tasks||[]).filter(t=>t.done).length;
+    const total = (p.tasks||[]).length;
+    const pct = total ? Math.round(done/total*100) : 0;
+    const thumb = (p.images||[])[0];
+    const card = document.createElement("div");
+    card.className = "proj-card";
+    card.innerHTML = `
+      <div class="proj-card-accent" style="background:${p.color||"#e63946"}"></div>
+      <div class="proj-card-thumb">
+        ${thumb ? `<img src="${thumb.url}" alt="">` : `<div class="proj-card-thumb-empty">${p.emoji||"📁"}</div>`}
+        <div class="proj-card-count">${(p.images||[]).length} img · ${(p.urls||[]).length} url</div>
+      </div>
+      <div class="proj-card-body">
+        <div class="proj-card-emoji">${p.emoji||"📁"}</div>
+        <div class="proj-card-name">${p.name}</div>
+        <div class="proj-card-desc">${p.desc||"No description"}</div>
+        <div class="proj-card-bar"><div class="proj-card-fill" style="width:${pct}%;background:${p.color||"#e63946"}"></div></div>
+        <div class="proj-card-meta"><span>${pct}% done</span><span>${total-done} open · ${(p.codeFiles||[]).length} code files</span></div>
+      </div>`;
+    card.onclick = () => openProject(p.id);
+    g.appendChild(card);
+  });
+}
+
+function openProject(id) {
+  state.activeProjectId = id;
+  state.chatHistory = [];
+  state.workTab = "gallery";
+  state.storageTab = "images";
+  const wb = document.getElementById("nav-ws-btn");
+  if (wb) wb.style.display = "";
+  showView("workspace");
+  setTimeout(() => autoGreet(), 300);
+}
+window.openProject = openProject;
+
+// ── Workspace ─────────────────────────────────────────────────────────────
+function renderWorkspace() {
+  const p = proj(); if (!p) return;
+  document.getElementById("ws-proj-label").textContent = p.name;
+  document.getElementById("ws-emoji").textContent = p.emoji||"📁";
+  document.getElementById("ws-name").textContent = p.name;
+
+  const links = document.getElementById("ws-links");
+  links.innerHTML = "";
+  if (p.github) {
+    const a = document.createElement("a");
+    a.className="link-chip"; a.href="https://github.com/"+p.github; a.target="_blank";
+    a.textContent="↗ GitHub"; links.appendChild(a);
+  }
+  if (p.vercel) {
+    const a = document.createElement("a");
+    a.className="link-chip"; a.href="https://"+p.vercel; a.target="_blank";
+    a.textContent="↗ Live"; links.appendChild(a);
+  }
+  if (p.github) {
+    const a = document.createElement("a");
+    a.className="link-chip";
+    a.href=`https://github.com/${p.github}/archive/refs/heads/main.zip`;
+    a.innerHTML="⬇ ZIP"; links.appendChild(a);
+  }
+  renderStoragePanel();
+  renderWorkArea();
+}
+
+// ── Storage Panel ─────────────────────────────────────────────────────────
+function switchStorageTab(tab) {
+  state.storageTab = tab;
+  document.querySelectorAll(".stab").forEach((el,i) => {
+    el.classList.toggle("active", ["images","urls","code"][i]===tab);
+  });
+  renderStoragePanel();
+}
+window.switchStorageTab = switchStorageTab;
+
+function renderStoragePanel() {
+  const p = proj(); if (!p) return;
+  const c = document.getElementById("storage-content");
+  c.innerHTML = "";
+
+  if (state.storageTab === "images") {
+    const dz = document.createElement("div");
+    dz.className = "drop-zone";
+    dz.innerHTML = `<div class="drop-zone-icon">📸</div><div class="drop-zone-text"><strong>Drop images here</strong>or click to upload</div>`;
+    dz.onclick = () => document.getElementById("file-input").click();
+    dz.addEventListener("dragover", e=>{e.preventDefault();dz.classList.add("drag-over");});
+    dz.addEventListener("dragleave", ()=>dz.classList.remove("drag-over"));
+    dz.addEventListener("drop", e=>{e.preventDefault();dz.classList.remove("drag-over");handleDropFiles(e.dataTransfer.files);});
+    c.appendChild(dz);
+
+    const urlRow = document.createElement("div");
+    urlRow.className = "url-input-wrap";
+    urlRow.innerHTML = `<input class="url-input" id="img-url-input" placeholder="Paste image URL..." onkeydown="if(event.key==='Enter')addImageUrl()"><button class="url-add-btn" onclick="addImageUrl()">Add</button>`;
+    c.appendChild(urlRow);
+
+    if ((p.images||[]).length === 0) {
+      c.appendChild(emptyState("📷","No images yet","Upload or paste a URL"));
+    } else {
+      (p.images||[]).forEach((img,i) => {
+        const item = document.createElement("div");
+        item.className = "asset-item";
+        item.innerHTML = `
+          <div class="asset-icon"><img src="${img.url}" alt="" onerror="this.parentElement.textContent='🖼'"></div>
+          <div class="asset-info"><div class="asset-name">${img.name||"Image "+(i+1)}</div><div class="asset-meta">${img.type||"image"} · ${img.size||""}</div></div>
+          <button class="asset-del" onclick="deleteImage(event,${i})">×</button>`;
+        c.appendChild(item);
+      });
+    }
+
+  } else if (state.storageTab === "urls") {
+    const keySection = document.createElement("div");
+    keySection.style.cssText = "margin-bottom:10px";
+    keySection.innerHTML = `<div style="font-size:9px;font-weight:600;color:var(--t3);letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px;padding:0 2px">Core links</div>`;
+
+    ["github","vercel"].forEach(key => {
+      const label = key==="github" ? "GitHub repo" : "Live URL";
+      const icon  = key==="github" ? "🐙" : "▲";
+      const val   = p[key] || "";
+      const wrap  = document.createElement("div");
+      wrap.style.cssText = "background:var(--s2);border:1px solid var(--bd2);border-radius:8px;padding:9px 10px;margin-bottom:6px";
+
+      if (state["editing_"+key]) {
+        wrap.style.borderColor = "var(--red)";
+        wrap.innerHTML = `
+          <div style="font-size:9px;color:var(--t3);margin-bottom:5px;font-weight:600;text-transform:uppercase;letter-spacing:.06em">${label}</div>
+          <div style="display:flex;gap:5px">
+            <input id="edit-${key}" class="url-input" value="${val}" style="flex:1;font-size:11px" onkeydown="if(event.key==='Enter')saveCoreLink('${key}');if(event.key==='Escape')cancelCoreLink('${key}')">
+            <button onclick="saveCoreLink('${key}')" style="padding:4px 9px;background:var(--red);border:none;color:#fff;border-radius:5px;font-size:11px;cursor:pointer;font-family:var(--sans);font-weight:500">Save</button>
+            <button onclick="cancelCoreLink('${key}')" style="padding:4px 7px;background:none;border:1px solid var(--bd2);color:var(--t2);border-radius:5px;font-size:11px;cursor:pointer">✕</button>
+          </div>`;
+        setTimeout(()=>{ const inp=document.getElementById("edit-"+key); if(inp){inp.focus();inp.select();} },30);
+      } else {
+        wrap.innerHTML = `
+          <div style="display:flex;align-items:center;gap:7px">
+            <span style="font-size:14px;flex-shrink:0">${icon}</span>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:9px;color:var(--t3);margin-bottom:2px;font-weight:600;text-transform:uppercase;letter-spacing:.06em">${label}</div>
+              <div style="font-size:11px;color:${val?"var(--t1)":"var(--t3)"};font-family:var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${val||"not set"}</div>
+            </div>
+            <div style="display:flex;gap:4px;flex-shrink:0">
+              ${val?`<a href="${key==="github"?"https://github.com/"+val:"https://"+val}" target="_blank" style="padding:3px 7px;background:none;border:1px solid var(--bd2);color:var(--t2);border-radius:4px;font-size:10px;text-decoration:none">↗</a>`:""}
+              <button onclick="editCoreLink('${key}')" style="padding:3px 7px;background:none;border:1px solid var(--bd2);color:var(--t2);border-radius:4px;font-size:10px;cursor:pointer;font-family:var(--sans)">${val?"Edit":"+ Set"}</button>
+            </div>
+          </div>`;
+      }
+      keySection.appendChild(wrap);
+    });
+    c.appendChild(keySection);
+
+    const otherSec = document.createElement("div");
+    otherSec.innerHTML = `<div style="font-size:9px;font-weight:600;color:var(--t3);letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px;padding:0 2px">Other links</div>`;
+    c.appendChild(otherSec);
+
+    const urlRow = document.createElement("div");
+    urlRow.className = "url-input-wrap";
+    urlRow.innerHTML = `<input class="url-input" id="url-input" placeholder="https://..." onkeydown="if(event.key==='Enter')addUrl()"><button class="url-add-btn" onclick="addUrl()">+ Add</button>`;
+    c.appendChild(urlRow);
+
+    if ((p.urls||[]).length === 0) {
+      const es = document.createElement("div");
+      es.style.cssText = "padding:12px;text-align:center;font-size:11px;color:var(--t3)";
+      es.textContent = "No other URLs yet";
+      c.appendChild(es);
+    } else {
+      (p.urls||[]).forEach((url,i) => {
+        const item = document.createElement("div");
+        item.style.cssText = "background:var(--s2);border:1px solid var(--bd);border-radius:7px;padding:8px 10px;margin-bottom:5px;display:flex;align-items:center;gap:8px";
+        item.innerHTML = `
+          <div style="flex:1;min-width:0">
+            <div style="font-size:12px;color:var(--t1);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${url.label||url.href}</div>
+            <div style="font-size:10px;color:var(--t3);font-family:var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${url.href}</div>
+          </div>
+          <a href="${url.href}" target="_blank" style="padding:3px 6px;background:none;border:1px solid var(--bd2);color:var(--t2);border-radius:4px;font-size:10px;text-decoration:none">↗</a>
+          <button onclick="deleteUrl(event,${i})" style="padding:3px 6px;background:none;border:1px solid var(--bd2);color:var(--t3);border-radius:4px;font-size:10px;cursor:pointer">×</button>`;
+        c.appendChild(item);
+      });
+    }
+
+  } else if (state.storageTab === "code") {
+    if (p.github) {
+      const ghd = document.createElement("div");
+      ghd.className = "gh-download";
+      const hasFiles = (p.codeFiles||[]).length > 0;
+      ghd.innerHTML = `
+        <div class="gh-download-title">📦 GitHub Source ${hasFiles?`<span style="font-size:10px;color:var(--grn);background:var(--gF);border:1px solid var(--grn)25;padding:2px 7px;border-radius:10px">✓ ${p.codeFiles.length} files</span>`:""}
+        </div>
+        <div class="gh-download-sub">${p.github}</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px">
+          <a href="https://github.com/${p.github}/archive/refs/heads/main.zip" class="gh-download-btn">⬇ Download .zip</a>
+          <a href="https://github.com/${p.github}" target="_blank" class="gh-download-btn">↗ View repo</a>
+        </div>`;
+      c.appendChild(ghd);
+    }
+
+    const btnRow = document.createElement("div");
+    btnRow.style.cssText = "display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:8px";
+    const uploadBtn = document.createElement("button");
+    uploadBtn.className="url-add-btn"; uploadBtn.style.cssText="padding:8px;font-size:11px;grid-column:1/-1";
+    uploadBtn.textContent="⬆ Upload code files";
+    uploadBtn.onclick = () => {
+      const inp = document.createElement("input");
+      inp.type="file"; inp.multiple=true; inp.accept=".ts,.tsx,.js,.jsx,.css,.json,.md,.html";
+      inp.onchange = e => handleCodeUpload(e.target.files);
+      inp.click();
+    };
+    btnRow.appendChild(uploadBtn);
+    c.appendChild(btnRow);
+
+    if ((p.codeFiles||[]).length === 0) {
+      c.appendChild(emptyState("💻","No code files","Upload files to read them here"));
+    } else {
+      const summary = document.createElement("div");
+      summary.style.cssText = "display:flex;align-items:center;justify-content:space-between;padding:6px 8px;background:var(--gF);border:1px solid var(--grn)20;border-radius:6px;margin-bottom:7px";
+      summary.innerHTML = `<span style="font-size:10px;color:var(--grn);font-weight:500">✓ ${p.codeFiles.length} files loaded</span><button onclick="clearCodeFiles()" style="font-size:10px;color:var(--t3);background:none;border:none;cursor:pointer;font-family:var(--sans)">Clear all</button>`;
+      c.appendChild(summary);
+
+      (p.codeFiles||[]).forEach((f,i) => {
+        const ext = f.path.split(".").pop();
+        const extColor = {tsx:"#60a5fa",ts:"#60a5fa",jsx:"#fbbf24",js:"#fbbf24",css:"#34d399",json:"#c4c4cc",md:"#c4c4cc",html:"#fb923c"}[ext]||"#555566";
+        const item = document.createElement("div");
+        item.className = "code-file-item" + (state.activeCodeFile===i?" active":"");
+        item.innerHTML = `<span class="code-ext" style="color:${extColor}">${ext}</span><span class="code-path">${f.path}</span>`;
+        item.onclick = () => openCodeFile(i);
+        c.appendChild(item);
+      });
+    }
+  }
+}
+
+function editCoreLink(key) { state["editing_"+key]=true; renderStoragePanel(); }
+function cancelCoreLink(key) { state["editing_"+key]=false; renderStoragePanel(); }
+function saveCoreLink(key) {
+  const p=proj(); if(!p) return;
+  const inp=document.getElementById("edit-"+key); if(!inp) return;
+  p[key]=inp.value.trim(); state["editing_"+key]=false;
+  save(); renderWorkspace();
+}
+window.editCoreLink=editCoreLink; window.cancelCoreLink=cancelCoreLink; window.saveCoreLink=saveCoreLink;
+
+function emptyState(icon, title, sub) {
+  const d=document.createElement("div"); d.className="empty-state"; d.style.flex="0";
+  d.innerHTML=`<div class="empty-icon">${icon}</div><div class="empty-title">${title}</div><div class="empty-sub">${sub}</div>`;
+  return d;
+}
+
+// ── Work Area ─────────────────────────────────────────────────────────────
+function switchWorkTab(tab) {
+  state.workTab = tab;
+  document.querySelectorAll(".ws-tab").forEach((el,i)=>{
+    el.classList.toggle("active",["gallery","code","tasks"][i]===tab);
+  });
+  renderWorkArea();
+}
+window.switchWorkTab = switchWorkTab;
+
+function renderWorkArea() {
+  const p=proj(); if(!p) return;
+  const area=document.getElementById("work-area");
+  area.innerHTML="";
+
+  if (state.workTab === "gallery") {
+    if ((p.images||[]).length === 0) {
+      const es=document.createElement("div"); es.className="empty-state"; es.style.flex="1";
+      es.innerHTML=`<div class="empty-icon">🖼</div><div class="empty-title">No screenshots yet</div><div class="empty-sub">Upload images in the Storage panel on the left.</div>`;
+      area.appendChild(es);
+      area.addEventListener("dragover",e=>{e.preventDefault();area.style.background="var(--rF)";});
+      area.addEventListener("dragleave",()=>area.style.background="");
+      area.addEventListener("drop",e=>{e.preventDefault();area.style.background="";handleDropFiles(e.dataTransfer.files);});
+    } else {
+      const grid=document.createElement("div"); grid.className="gallery-grid";
+      (p.images||[]).forEach((img,i)=>{
+        const item=document.createElement("div"); item.className="gallery-item";
+        item.innerHTML=`<img src="${img.url}" alt="${img.name||""}"><div class="gallery-item-label">${img.name||"Image "+(i+1)}</div><button class="gallery-del" onclick="deleteImage(event,${i})">×</button>`;
+        item.onclick=()=>viewImageFull(img);
+        grid.appendChild(item);
+      });
+      area.appendChild(grid);
+    }
+
+  } else if (state.workTab === "code") {
+    if (state.activeCodeFile !== null && (p.codeFiles||[])[state.activeCodeFile]) {
+      const f=p.codeFiles[state.activeCodeFile];
+      const viewer=document.createElement("div"); viewer.className="code-viewer";
+      viewer.innerHTML=`
+        <div class="code-viewer-bar">
+          <span style="font-family:var(--mono);color:var(--t1)">${f.path}</span>
+          <div style="display:flex;gap:6px">
+            <button onclick="copyCode()" style="font-size:10px;color:var(--t2);padding:2px 7px;border:1px solid var(--bd);border-radius:4px;background:none;cursor:pointer;font-family:var(--sans)">Copy</button>
+            <button onclick="pullCodeToChat()" style="font-size:10px;color:var(--blu);padding:2px 7px;border:1px solid var(--blu)30;border-radius:4px;background:var(--bF);cursor:pointer;font-family:var(--sans)">Ask Hermes ↗</button>
+          </div>
+        </div>
+        <div class="code-content"><pre id="code-pre"></pre></div>`;
+      area.appendChild(viewer);
+      document.getElementById("code-pre").textContent = f.content||"(empty)";
+    } else if ((p.codeFiles||[]).length===0) {
+      const es=document.createElement("div"); es.className="empty-state"; es.style.flex="1";
+      es.innerHTML=`<div class="empty-icon">💻</div><div class="empty-title">No code loaded</div><div class="empty-sub">Upload files in the Code tab on the left</div>`;
+      area.appendChild(es);
+    } else {
+      const es=document.createElement("div"); es.className="empty-state"; es.style.flex="1";
+      es.innerHTML=`<div class="empty-icon">←</div><div class="empty-title">Select a file</div><div class="empty-sub">Click a file in the Code tab</div>`;
+      area.appendChild(es);
+    }
+
+  } else if (state.workTab === "tasks") {
+    const wrap=document.createElement("div"); wrap.style.cssText="flex:1;overflow-y:auto;padding:14px 18px";
+    const list=document.createElement("div"); list.style.cssText="border:1px solid var(--bd);border-radius:9px;overflow:hidden";
+
+    const thead=document.createElement("div");
+    thead.style.cssText="display:grid;grid-template-columns:1fr 90px 80px;padding:7px 12px;font-size:9px;font-weight:600;color:var(--t3);letter-spacing:.06em;text-transform:uppercase;border-bottom:1px solid var(--bd);background:var(--s2)";
+    thead.innerHTML="<span>Task</span><span style='text-align:center'>Status</span><span style='text-align:center'>Done?</span>";
+    list.appendChild(thead);
+
+    (p.tasks||[]).forEach((t,i)=>{
+      const isLast=i===(p.tasks||[]).length-1;
+      const sc=t.done?"#34d399":"#44445a";
+      const row=document.createElement("div");
+      row.style.cssText=`display:grid;grid-template-columns:1fr 90px 80px;padding:10px 12px;align-items:center;border-bottom:${isLast?"none":"1px solid var(--bd)"}`;
+      row.innerHTML=`
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="width:14px;height:14px;border-radius:3px;border:1.5px solid ${sc};background:${t.done?sc+"30":"transparent"};display:flex;align-items:center;justify-content:center;flex-shrink:0">
+            ${t.done?`<span style="font-size:8px;color:#34d399">✓</span>`:""}
+          </div>
+          <span style="font-size:12px;color:${t.done?"var(--t3)":"var(--t1)"};text-decoration:${t.done?"line-through":"none"}">${t.label}</span>
+          ${t.note?`<span style="font-size:10px;color:var(--t3)">${t.note}</span>`:""}
+        </div>
+        <div style="text-align:center"><span style="font-size:10px;color:${sc};background:${sc}12;border:1px solid ${sc}25;padding:2px 7px;border-radius:3px">${t.done?"Done":"Todo"}</span></div>
+        <div style="text-align:center">
+          <button onclick="toggleTask('${p.id}',${i})" style="font-size:10px;padding:3px 10px;border-radius:4px;cursor:pointer;background:transparent;border:1px solid ${t.done?"#34d39940":"#60a5fa40"};color:${t.done?"#34d399":"#60a5fa"};font-family:var(--sans)">
+            ${t.done?"✓ Done":"Mark done"}
+          </button>
+        </div>`;
+      list.appendChild(row);
+    });
+
+    wrap.appendChild(list);
+    area.appendChild(wrap);
+  }
+}
+
+function toggleTask(projId, taskIdx) {
+  const p=state.projects.find(x=>x.id===projId); if(!p) return;
+  p.tasks[taskIdx].done = !p.tasks[taskIdx].done;
+  save(); renderWorkArea(); renderProjectsGrid();
+}
+window.toggleTask=toggleTask;
+
+// ── Storage ops ───────────────────────────────────────────────────────────
+function handleDropFiles(files) {
+  const p=proj(); if(!p) return;
+  if(!p.images) p.images=[];
+  const imgs=Array.from(files).filter(f=>f.type.startsWith("image/"));
+  if(!imgs.length) return;
+  setStatus("uploading...","#fbbf24");
+  Promise.all(imgs.map(async f=>{
+    const kb=Math.round(f.size/1024);
+    try {
+      const {url,path}=await window.__uploadImageFile(f);
+      p.images.push({url,path,name:f.name,type:f.type,size:kb+"KB",ts:new Date().toISOString()});
+    } catch(e) { addChatMsg("hermes","Upload failed: "+e.message); }
+  })).then(()=>{ save(); renderWorkspace(); setStatus("ready","#34d399"); addChatMsg("hermes",imgs.length+" image"+(imgs.length>1?"s":"")+" uploaded. ✓"); });
+}
+window.handleDropFiles=handleDropFiles;
+
+function handleFileUpload(e) { handleDropFiles(e.target.files); e.target.value=""; }
+window.handleFileUpload=handleFileUpload;
+
+function addImageUrl() {
+  const p=proj(); if(!p) return;
+  const inp=document.getElementById("img-url-input");
+  const url=inp.value.trim(); if(!url) return;
+  if(!p.images) p.images=[];
+  const name=url.split("/").pop().split("?")[0]||"image";
+  p.images.push({url,name,type:"url",size:"",ts:new Date().toISOString()});
+  inp.value=""; save(); renderWorkspace();
+}
+window.addImageUrl=addImageUrl;
+
+function addUrl() {
+  const p=proj(); if(!p) return;
+  const inp=document.getElementById("url-input");
+  let href=inp.value.trim(); if(!href) return;
+  if(!href.startsWith("http")) href="https://"+href;
+  if(!p.urls) p.urls=[];
+  p.urls.push({href,label:href.replace(/^https?:\/\//,"").split("/")[0],ts:new Date().toISOString()});
+  inp.value=""; save(); renderStoragePanel();
+}
+window.addUrl=addUrl;
+
+function deleteImage(e,i) {
+  e.stopPropagation();
+  const p=proj(); if(!p) return;
+  if(confirm("Remove this image?")) {
+    const img=p.images[i];
+    if(img?.path) window.__sb.storage.from(window.__BUCKET).remove([img.path]).catch(()=>{});
+    p.images.splice(i,1); save(); renderWorkspace();
+  }
+}
+window.deleteImage=deleteImage;
+
+function deleteUrl(e,i) {
+  e.stopPropagation();
+  const p=proj(); if(!p) return;
+  p.urls.splice(i,1); save(); renderStoragePanel();
+}
+window.deleteUrl=deleteUrl;
+
+function viewImageFull(img) {
+  const existing=document.getElementById("lightbox"); if(existing) existing.remove();
+  const lb=document.createElement("div");
+  lb.id="lightbox";
+  lb.style.cssText="position:fixed;inset:0;background:rgba(0,0,0,.92);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:200;cursor:zoom-out;padding:20px";
+  const closeBtn=document.createElement("button");
+  closeBtn.style.cssText="position:absolute;top:16px;right:16px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:#fff;width:34px;height:34px;border-radius:50%;font-size:18px;cursor:pointer;line-height:1;z-index:201";
+  closeBtn.textContent="×"; closeBtn.onclick=e=>{e.stopPropagation();lb.remove();};
+  const image=document.createElement("img");
+  image.src=img.url; image.style.cssText="max-width:90vw;max-height:80vh;object-fit:contain;border-radius:6px;box-shadow:0 24px 80px rgba(0,0,0,.6)";
+  image.onclick=e=>e.stopPropagation();
+  lb.appendChild(closeBtn); lb.appendChild(image); lb.onclick=()=>lb.remove();
+  const onKey=e=>{if(e.key==="Escape"){lb.remove();document.removeEventListener("keydown",onKey);}};
+  document.addEventListener("keydown",onKey);
+  document.body.appendChild(lb);
+}
+
+function openCodeFile(i) {
+  state.activeCodeFile=i; renderStoragePanel(); switchWorkTab("code");
+}
+window.openCodeFile=openCodeFile;
+
+function handleCodeUpload(files) {
+  const p=proj(); if(!p) return;
+  if(!p.codeFiles) p.codeFiles=[];
+  let done=0;
+  Array.from(files).forEach(f=>{
+    const reader=new FileReader();
+    reader.onload=e=>{
+      p.codeFiles.push({path:f.name,content:e.target.result});
+      done++;
+      if(done===files.length){save();renderStoragePanel();switchWorkTab("code");}
+    };
+    reader.readAsText(f);
+  });
+}
+window.handleCodeUpload=handleCodeUpload;
+
+function copyCode() {
+  const p=proj(); if(!p) return;
+  const f=p.codeFiles[state.activeCodeFile];
+  if(f?.content) navigator.clipboard.writeText(f.content).catch(()=>{});
+}
+window.copyCode=copyCode;
+
+function pullCodeToChat() {
+  const p=proj(); if(!p) return;
+  const f=p.codeFiles[state.activeCodeFile]; if(!f?.content) return;
+  const snippet=f.content.slice(0,3000);
+  document.getElementById("chat-input").value=`Review this file and tell me what to improve:\n\n\`\`\`${f.path.split(".").pop()}\n// ${f.path}\n${snippet}${f.content.length>3000?"\n// ...truncated":""}\n\`\`\``;
+  document.getElementById("chat-input").focus();
+  autoResize(document.getElementById("chat-input"));
+}
+window.pullCodeToChat=pullCodeToChat;
+
+function clearCodeFiles() {
+  const p=proj(); if(!p) return;
+  if(!confirm("Remove all code files?")) return;
+  p.codeFiles=[]; state.activeCodeFile=null; save(); renderStoragePanel(); renderWorkArea();
+}
+window.clearCodeFiles=clearCodeFiles;
+
+// ── Projects CRUD ─────────────────────────────────────────────────────────
+function openNewProjectModal() { document.getElementById("new-project-modal").style.display="flex"; }
+function openEditProjectModal() {
+  const p=proj(); if(!p) return;
+  document.getElementById("ep-name").value=p.name;
+  document.getElementById("ep-emoji").value=p.emoji||"";
+  document.getElementById("ep-desc").value=p.desc||"";
+  document.getElementById("ep-github").value=p.github||"";
+  document.getElementById("ep-vercel").value=p.vercel||"";
+  document.getElementById("edit-project-modal").style.display="flex";
+}
+function closeModal(id) { document.getElementById(id).style.display="none"; }
+window.openNewProjectModal=openNewProjectModal; window.openEditProjectModal=openEditProjectModal; window.closeModal=closeModal;
+
+function createProject() {
+  const name=document.getElementById("np-name").value.trim(); if(!name) return;
+  const p={
+    id:"p"+Date.now(), name, emoji:document.getElementById("np-emoji").value||"📁",
+    desc:document.getElementById("np-desc").value,
+    github:document.getElementById("np-github").value.trim(),
+    vercel:document.getElementById("np-vercel").value.trim(),
+    color:["#34d399","#fbbf24","#e63946","#60a5fa","#a78bfa","#fb923c"][Math.floor(Math.random()*6)],
+    images:[], urls:[], codeFiles:[],
+    tasks:[{id:"t1",label:"Define project scope",done:false},{id:"t2",label:"Set up repo",done:false}]
+  };
+  state.projects.push(p);
+  ["np-name","np-emoji","np-desc","np-github","np-vercel"].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=""; });
+  closeModal("new-project-modal"); save(); openProject(p.id);
+}
+window.createProject=createProject;
+
+function saveEditProject() {
+  const p=proj(); if(!p) return;
+  p.name=document.getElementById("ep-name").value.trim()||p.name;
+  p.emoji=document.getElementById("ep-emoji").value||p.emoji;
+  p.desc=document.getElementById("ep-desc").value;
+  p.github=document.getElementById("ep-github").value.trim();
+  p.vercel=document.getElementById("ep-vercel").value.trim();
+  closeModal("edit-project-modal"); save(); renderWorkspace();
+}
+window.saveEditProject=saveEditProject;
+
+function confirmDeleteProject() {
+  const p=proj(); if(!p) return;
+  if(!confirm("Delete \""+p.name+"\"? This cannot be undone.")) return;
+  state.projects=state.projects.filter(x=>x.id!==p.id);
+  state.activeProjectId=null; save(); showView("projects");
+}
+window.confirmDeleteProject=confirmDeleteProject;
+
+// ── Status ────────────────────────────────────────────────────────────────
+function setStatus(label, color="#34d399") {
+  const sl=document.getElementById("slabel"); const sd=document.getElementById("sdot");
+  if(sl) sl.textContent=label; if(sd) sd.style.background=color;
+}
+
+// ── Claude Chat ───────────────────────────────────────────────────────────
+async function askClaude(messages, sysOverride) {
+  const p=proj();
+  const open=p?(p.tasks||[]).filter(t=>!t.done).map(t=>t.label+(t.note?" ("+t.note+")":"")).join(", "):"";
+  const system=sysOverride||`You are Hermes — David's technical co-founder. David is a solo founder building hospitality tech in Palawan, Philippines (merQato.digital). Products: BAIA BackOffice (resort OS), PinoyLink (Filipino link-in-bio), merQato.digital (agency site).
+
+Tone: Direct, sharp, occasionally dry. Give real opinions. Push back when needed. No corporate language.
+
+${p?`Current project: ${p.name} — ${p.desc||""}\nOpen tasks: ${open||"all done"}\nGitHub: ${p.github||"none"}\nLive: ${p.vercel||"none"}`:""}
+
+When showing code, put the path on the fence header.`;
+
+  const r=await fetch("https://api.anthropic.com/v1/messages",{
+    method:"POST",
+    headers:{"Content-Type":"application/json","anthropic-dangerous-allow-browser":"true"},
+    body:JSON.stringify({model:"claude-sonnet-4-5",max_tokens:2000,system,messages})
+  });
+  if(!r.ok) throw new Error("Claude "+r.status);
+  const d=await r.json();
+  return d.content.filter(b=>b.type==="text").map(b=>b.text).join("");
+}
+
+async function autoGreet() {
+  const p=proj(); if(!p) return;
+  setStatus("thinking...","#fbbf24");
+  const open=(p.tasks||[]).filter(t=>!t.done);
+  const context=`Project: ${p.name} — ${p.desc||""}\nOpen tasks: ${open.map(t=>t.label+(t.note?" ("+t.note+")":"")).join(", ")||"all done"}\nStored: ${(p.images||[]).length} images, ${(p.urls||[]).length} URLs, ${(p.codeFiles||[]).length} code files`;
+  try {
+    const reply=await askClaude([{role:"user",content:context+"\n\nGive me a quick read on this project in 2-3 sentences. What's the most important thing to do right now and why?"}]);
+    addChatMsg("hermes",reply);
+    showSugs([...open.slice(0,3).map(t=>"Work on: "+t.label),"What's in my storage?","Review the codebase"]);
+  } catch(e) {
+    addChatMsg("hermes","Hey — I'm Hermes. I can't reach Claude directly from the browser due to CORS on the Anthropic API. To enable AI chat, you'd need a server proxy. But your storage, tasks, and project tracking all work fine right now.");
+    showSugs(open.slice(0,3).map(t=>"▶ "+t.label));
+  }
+  setStatus("ready","#34d399");
+}
+
+async function sendChat() {
+  const inp=document.getElementById("chat-input");
+  const txt=inp.value.trim(); if(!txt||state.thinking) return;
+  inp.value=""; autoResize(inp); clearSugs();
+  addChatMsg("user",txt);
+  state.chatHistory.push({role:"user",content:txt});
+  state.thinking=true; setStatus("thinking...","#fbbf24");
+  document.getElementById("chat-send").disabled=true;
+
+  const p=proj();
+  const lower=txt.toLowerCase();
+  if(p && (lower.includes("what's in my storage")||lower.includes("storage"))) {
+    const reply=`You've got ${(p.images||[]).length} images, ${(p.urls||[]).length} URLs, and ${(p.codeFiles||[]).length} code files for ${p.name}.`;
+    addChatMsg("hermes",reply); state.thinking=false; setStatus("ready","#34d399"); document.getElementById("chat-send").disabled=false; return;
+  }
+
+  try {
+    const reply=await askClaude(state.chatHistory.map(m=>({role:m.role,content:m.content})));
+    state.chatHistory.push({role:"assistant",content:reply});
+    addChatMsg("hermes",reply);
+    if(p) { const open=(p.tasks||[]).filter(t=>!t.done).slice(0,2); showSugs([...open.map(t=>"Work on: "+t.label),"What's most urgent?"]); }
+  } catch(e) {
+    addChatMsg("hermes","Can't reach Claude directly from the browser (CORS restriction). You need a server-side proxy to use the Anthropic API from a static site.");
+  }
+
+  state.thinking=false; setStatus("ready","#34d399"); document.getElementById("chat-send").disabled=false;
+}
+window.sendChat=sendChat;
+
+function addChatMsg(role, text, extraHtml, msgId) {
+  const wrap=document.getElementById("chat-messages");
+  const d=document.createElement("div"); d.className="chat-msg";
+  if(msgId) d.setAttribute("data-msgid",msgId);
+  if(role==="hermes") {
+    d.innerHTML=`<div class="chat-msg-role" style="color:var(--red)"><span style="width:4px;height:4px;border-radius:50%;background:var(--red);display:inline-block"></span>Hermes</div><div class="chat-msg-bubble">${text}${extraHtml||""}</div>`;
+  } else {
+    d.innerHTML=`<div class="chat-msg-role" style="color:var(--t3)">you</div><div class="chat-msg-bubble user-bubble">${text}</div>`;
+  }
+  wrap.appendChild(d); wrap.scrollTop=wrap.scrollHeight;
+}
+
+function clearChat() {
+  state.chatHistory=[]; document.getElementById("chat-messages").innerHTML="";
+  if(state.activeProjectId) autoGreet();
+}
+window.clearChat=clearChat;
+
+function showSugs(items) {
+  const el=document.getElementById("suggestions"); el.innerHTML="";
+  (items||[]).filter(Boolean).slice(0,4).forEach(s=>{
+    const btn=document.createElement("button"); btn.className="sug-btn"; btn.textContent=s;
+    btn.onclick=()=>{document.getElementById("chat-input").value=s;sendChat();};
+    el.appendChild(btn);
+  });
+}
+
+function clearSugs() { document.getElementById("suggestions").innerHTML=""; }
+
+function chatKeydown(e) { if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();sendChat();} }
+window.chatKeydown=chatKeydown;
+
+function autoResize(el) { el.style.height="18px"; el.style.height=Math.min(el.scrollHeight,100)+"px"; }
+window.autoResize=autoResize;
+
+// ── Boot ──────────────────────────────────────────────────────────────────
+(async ()=>{
+  await load();
+  renderProjectsGrid();
+})();
+
+document.getElementById("clock").textContent=new Date().toLocaleTimeString("en-US",{hour12:false,hour:"2-digit",minute:"2-digit",second:"2-digit"});
+</script>
+</body>
+</html>
