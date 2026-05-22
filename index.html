@@ -210,6 +210,7 @@
   <div class="wordmark">Hermes</div>
   <div class="nav-sep"></div>
   <button class="nav-btn active" id="nav-projects" onclick="showView('projects')">Projects</button>
+  <button class="nav-btn" id="nav-agent" onclick="showView('agent')">Agent</button>
   <button class="nav-btn" id="nav-ws-btn" onclick="showView('workspace')" style="display:none">Workspace</button>
   <div class="spacer"></div>
   <div class="status-pill">
@@ -218,6 +219,11 @@
   </div>
   <button class="nav-btn" onclick="openSettings()" title="Settings" style="font-size:15px;padding:2px 8px;color:var(--t2)">⚙</button>
   <div class="clock" id="clock"></div>
+</div>
+
+<!-- AGENT VIEW -->
+<div class="view" id="agent-view" style="overflow-y:auto;display:none">
+  <div id="root"></div>
 </div>
 
 <!-- PROJECTS VIEW -->
@@ -362,6 +368,7 @@
 
 <input type="file" id="file-input" style="display:none" multiple accept="image/*" onchange="handleFileUpload(event)">
 
+<script type="module" src="/src/main.jsx"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script>
 // ── Supabase ──────────────────────────────────────────────────────────────
@@ -438,12 +445,15 @@ setInterval(() => {
 
 // ── Views ─────────────────────────────────────────────────────────────────
 function showView(v) {
-  document.querySelectorAll(".view").forEach(el => el.classList.remove("active"));
+  document.querySelectorAll(".view").forEach(el => { el.classList.remove("active"); el.style.display="none"; });
   document.querySelectorAll(".nav-btn").forEach(el => el.classList.remove("active"));
-  document.getElementById(v+"-view")?.classList.add("active");
+  const vEl = document.getElementById(v+"-view");
+  if(vEl) { vEl.style.display=""; vEl.classList.add("active"); }
   if (v === "projects") {
     document.getElementById("nav-projects")?.classList.add("active");
     renderProjectsGrid();
+  } else if (v === "agent") {
+    document.getElementById("nav-agent")?.classList.add("active");
   } else {
     const wb = document.getElementById("nav-ws-btn");
     if (wb) { wb.style.display=""; wb.classList.add("active"); }
