@@ -268,8 +268,8 @@
       <div class="ws-proj-links" id="ws-links"></div>
     </div>
     <div class="ws-tabs">
-      <button class="ws-tab active" onclick="switchWorkTab('gallery')">Gallery</button>
-      <button class="ws-tab" onclick="switchWorkTab('code')">Code Viewer</button>
+      <button class="ws-tab active" onclick="switchWorkTab('preview')">Live Preview</button>
+      <button class="ws-tab" onclick="switchWorkTab('code')">Code</button>
       <button class="ws-tab" onclick="switchWorkTab('tasks')">Tasks</button>
     </div>
     <div id="work-area" style="flex:1;display:flex;flex-direction:column;overflow:hidden"></div>
@@ -448,6 +448,7 @@ let state = {
   thinking: false,
   agentBusy: false,
   activeCodeFile: null,
+  ghTree: null,
   runs: {},
 };
 
@@ -548,8 +549,8 @@ function renderProjectsGrid() {
 function openProject(id) {
   state.activeProjectId = id;
   state.chatHistory = [];
-  state.workTab = "gallery";
-  state.storageTab = "images";
+  state.workTab = "preview";
+  state.storageTab = "code";
   const wb = document.getElementById("nav-ws-btn");
   if (wb) wb.style.display = "";
   showView("workspace");
@@ -703,40 +704,41 @@ function renderStoragePanel() {
     if (p.github) {
       const ghd = document.createElement("div");
       ghd.className = "gh-download";
-      const hasFiles = (p.codeFiles||[]).length > 0;
       ghd.innerHTML = `
-        <div class="gh-download-title">📦 GitHub Source ${hasFiles?`<span style="font-size:10px;color:var(--grn);background:var(--gF);border:1px solid var(--grn)25;padding:2px 7px;border-radius:10px">✓ ${p.codeFiles.length} files</span>`:""}
-        </div>
-        <div class="gh-download-sub">${p.github}</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px">
-          <a href="https://github.com/${p.github}/archive/refs/heads/main.zip" class="gh-download-btn">⬇ Download .zip</a>
-          <a href="https://github.com/${p.github}" target="_blank" class="gh-download-btn">↗ View repo</a>
+        <div class="gh-download-title">📦 ${p.github}</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:6px">
+          <button onclick="fetchGithubTree('${p.github}','')" class="gh-download-btn">⬇ Browse repo</button>
+          <a href="https://github.com/${p.github}" target="_blank" class="gh-download-btn">↗ GitHub</a>
         </div>`;
       c.appendChild(ghd);
     }
 
-    const btnRow = document.createElement("div");
-    btnRow.style.cssText = "display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:8px";
-    const uploadBtn = document.createElement("button");
-    uploadBtn.className="url-add-btn"; uploadBtn.style.cssText="padding:8px;font-size:11px;grid-column:1/-1";
-    uploadBtn.textContent="⬆ Upload code files";
-    uploadBtn.onclick = () => {
-      const inp = document.createElement("input");
-      inp.type="file"; inp.multiple=true; inp.accept=".ts,.tsx,.js,.jsx,.css,.json,.md,.html";
-      inp.onchange = e => handleCodeUpload(e.target.files);
-      inp.click();
-    };
-    btnRow.appendChild(uploadBtn);
-    c.appendChild(btnRow);
+    if (state.ghTree && state.ghTree.repo === p.github) {
+      const treePath = state.ghTree.path || "";
+      const treeHeader = document.createElement("div");
+      treeHeader.style.cssText="display:flex;align-items:center;gap:5px;padding:5px 2px;margin-bottom:4px";
+      treeHeader.innerHTML=`<span style="font-size:10px;color:var(--t3);font-family:var(--mono);flex:1;overflow:hidden;text-overflow:ellipsis">/${treePath}</span>${treePath?`<button onclick="fetchGithubTree('${p.github}','${treePath.split('/').slice(0,-1).join('/')}')" style="font-size:10px;color:var(--t3);background:none;border:none;cursor:pointer">← up</button>`:""}`;
+      c.appendChild(treeHeader);
 
-    if ((p.codeFiles||[]).length === 0) {
-      c.appendChild(emptyState("💻","No code files","Upload files to read them here"));
-    } else {
+      (state.ghTree.items||[]).forEach(item => {
+        const el = document.createElement("div");
+        el.className = "code-file-item";
+        const isDir = item.type==="dir";
+        const ext = isDir ? "" : (item.name.split(".").pop()||"");
+        const extColor = {tsx:"#60a5fa",ts:"#60a5fa",jsx:"#fbbf24",js:"#fbbf24",css:"#34d399",json:"#c4c4cc",md:"#c4c4cc",html:"#fb923c"}[ext]||"#555566";
+        el.innerHTML=`<span class="code-ext" style="color:${isDir?"var(--t3)":extColor}">${isDir?"dir":ext}</span><span class="code-path">${item.name}${isDir?"/":""}</span>`;
+        el.onclick = isDir
+          ? () => fetchGithubTree(p.github, (treePath?treePath+"/":"")+item.name)
+          : () => fetchGithubFile(p.github, (treePath?treePath+"/":"")+item.name);
+        c.appendChild(el);
+      });
+    }
+
+    if ((p.codeFiles||[]).length > 0) {
       const summary = document.createElement("div");
-      summary.style.cssText = "display:flex;align-items:center;justify-content:space-between;padding:6px 8px;background:var(--gF);border:1px solid var(--grn)20;border-radius:6px;margin-bottom:7px";
-      summary.innerHTML = `<span style="font-size:10px;color:var(--grn);font-weight:500">✓ ${p.codeFiles.length} files loaded</span><button onclick="clearCodeFiles()" style="font-size:10px;color:var(--t3);background:none;border:none;cursor:pointer;font-family:var(--sans)">Clear all</button>`;
+      summary.style.cssText = "display:flex;align-items:center;justify-content:space-between;padding:6px 8px;background:var(--gF);border:1px solid var(--grn)20;border-radius:6px;margin:8px 0 4px";
+      summary.innerHTML = `<span style="font-size:10px;color:var(--grn);font-weight:500">✓ ${p.codeFiles.length} open</span><button onclick="clearCodeFiles()" style="font-size:10px;color:var(--t3);background:none;border:none;cursor:pointer;font-family:var(--sans)">Clear</button>`;
       c.appendChild(summary);
-
       (p.codeFiles||[]).forEach((f,i) => {
         const ext = f.path.split(".").pop();
         const extColor = {tsx:"#60a5fa",ts:"#60a5fa",jsx:"#fbbf24",js:"#fbbf24",css:"#34d399",json:"#c4c4cc",md:"#c4c4cc",html:"#fb923c"}[ext]||"#555566";
@@ -746,9 +748,47 @@ function renderStoragePanel() {
         item.onclick = () => openCodeFile(i);
         c.appendChild(item);
       });
+    } else if (!p.github) {
+      c.appendChild(emptyState("💻","No repo","Set a GitHub repo in project settings"));
     }
   }
 }
+
+async function fetchGithubTree(repo, path) {
+  setStatus("fetching...","#fbbf24");
+  const ghToken = localStorage.getItem("hermes_gh_token");
+  const headers = { "Accept":"application/vnd.github+json", ...(ghToken?{"Authorization":"Bearer "+ghToken}:{}) };
+  try {
+    const r = await fetch(`https://api.github.com/repos/${repo}/contents/${path||""}`, {headers});
+    if (!r.ok) { addChatMsg("hermes",`GitHub ${r.status} — check token in ⚙ Settings`); setStatus("ready","#34d399"); return; }
+    const d = await r.json();
+    const items = Array.isArray(d) ? d.sort((a,b)=>a.type==="dir"?-1:b.type==="dir"?1:a.name.localeCompare(b.name)) : [];
+    state.ghTree = { repo, path, items };
+    switchStorageTab("code");
+  } catch(e) { addChatMsg("hermes","Failed to fetch repo: "+e.message); }
+  setStatus("ready","#34d399");
+}
+window.fetchGithubTree = fetchGithubTree;
+
+async function fetchGithubFile(repo, path) {
+  setStatus("loading file...","#fbbf24");
+  const ghToken = localStorage.getItem("hermes_gh_token");
+  const headers = { "Accept":"application/vnd.github+json", ...(ghToken?{"Authorization":"Bearer "+ghToken}:{}) };
+  try {
+    const r = await fetch(`https://api.github.com/repos/${repo}/contents/${path}`, {headers});
+    if (!r.ok) { addChatMsg("hermes",`GitHub ${r.status}`); setStatus("ready","#34d399"); return; }
+    const d = await r.json();
+    const content = d.content ? atob(d.content.replace(/\n/g,"")) : "";
+    const p = proj(); if (!p) return;
+    if (!p.codeFiles) p.codeFiles = [];
+    const existing = p.codeFiles.findIndex(f=>f.path===path);
+    if (existing >= 0) { state.activeCodeFile = existing; }
+    else { p.codeFiles.push({path, content}); state.activeCodeFile = p.codeFiles.length-1; }
+    switchWorkTab("code");
+  } catch(e) { addChatMsg("hermes","Failed: "+e.message); }
+  setStatus("ready","#34d399");
+}
+window.fetchGithubFile = fetchGithubFile;
 
 function editCoreLink(key) { state["editing_"+key]=true; renderStoragePanel(); }
 function cancelCoreLink(key) { state["editing_"+key]=false; renderStoragePanel(); }
@@ -770,7 +810,7 @@ function emptyState(icon, title, sub) {
 function switchWorkTab(tab) {
   state.workTab = tab;
   document.querySelectorAll(".ws-tab").forEach((el,i)=>{
-    el.classList.toggle("active",["gallery","code","tasks"][i]===tab);
+    el.classList.toggle("active",["preview","code","tasks"][i]===tab);
   });
   renderWorkArea();
 }
@@ -781,23 +821,22 @@ function renderWorkArea() {
   const area=document.getElementById("work-area");
   area.innerHTML="";
 
-  if (state.workTab === "gallery") {
-    if ((p.images||[]).length === 0) {
+  if (state.workTab === "preview") {
+    if (!p.vercel) {
       const es=document.createElement("div"); es.className="empty-state"; es.style.flex="1";
-      es.innerHTML=`<div class="empty-icon">🖼</div><div class="empty-title">No screenshots yet</div><div class="empty-sub">Upload images in the Storage panel on the left.</div>`;
+      es.innerHTML=`<div class="empty-icon">🌐</div><div class="empty-title">No live URL set</div><div class="empty-sub">Add the Vercel URL in project settings to preview the live app here.</div>`;
       area.appendChild(es);
-      area.addEventListener("dragover",e=>{e.preventDefault();area.style.background="var(--rF)";});
-      area.addEventListener("dragleave",()=>area.style.background="");
-      area.addEventListener("drop",e=>{e.preventDefault();area.style.background="";handleDropFiles(e.dataTransfer.files);});
     } else {
-      const grid=document.createElement("div"); grid.className="gallery-grid";
-      (p.images||[]).forEach((img,i)=>{
-        const item=document.createElement("div"); item.className="gallery-item";
-        item.innerHTML=`<img src="${img.url}" alt="${img.name||""}"><div class="gallery-item-label">${img.name||"Image "+(i+1)}</div><button class="gallery-del" onclick="deleteImage(event,${i})">×</button>`;
-        item.onclick=()=>viewImageFull(img);
-        grid.appendChild(item);
-      });
-      area.appendChild(grid);
+      const bar=document.createElement("div");
+      bar.style.cssText="padding:6px 12px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:8px;flex-shrink:0;background:var(--s1)";
+      bar.innerHTML=`<span style="font-size:10px;color:var(--t3);font-family:var(--mono);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">https://${p.vercel}</span><a href="https://${p.vercel}" target="_blank" class="link-chip" style="font-size:10px">↗ open</a><button onclick="document.getElementById('preview-frame').src='https://${p.vercel}'" style="font-size:10px;color:var(--t2);padding:2px 8px;border:1px solid var(--bd);border-radius:4px;background:none;cursor:pointer">↺</button>`;
+      area.appendChild(bar);
+      const frame=document.createElement("iframe");
+      frame.id="preview-frame";
+      frame.src="https://"+p.vercel;
+      frame.style.cssText="flex:1;border:none;width:100%;background:#fff";
+      frame.sandbox="allow-scripts allow-same-origin allow-forms allow-popups";
+      area.appendChild(frame);
     }
 
   } else if (state.workTab === "code") {
@@ -1103,8 +1142,9 @@ Tone: Direct, sharp, occasionally dry. Give real opinions. Push back when needed
 ${p?`Current project: ${p.name} — ${p.desc||""}\nOpen tasks: ${open||"all done"}\nGitHub: ${p.github||"none"}\nLive: ${p.vercel||"none"}`:""}
 ${ghToken?"GitHub token active — use tools to read repo files, commits, structure.":"No GitHub token — cannot read repos."}
 ${vercelToken?"Vercel token active — use tools to check deployments.":""}
+${(()=>{ const f=(proj()?.codeFiles||[])[state.activeCodeFile]; return f?`\nCurrently open file: ${f.path}\n\`\`\`\n${f.content.slice(0,3000)}\n\`\`\``:""})()}
 
-When showing code, put the path on the fence header. Use tools proactively when the user asks about the codebase or deployments.`;
+When showing code improvements, output the full corrected file with the path on the fence header. Be specific about line changes. Use tools proactively when asked about the codebase or deployments.`;
 
   const apiKey = localStorage.getItem("hermes_api_key");
 
