@@ -382,6 +382,56 @@ const GH = "";
 const OLLAMA_URL = "http://localhost:11434/v1/chat/completions";
 let OLLAMA_MODEL = localStorage.getItem("hermes_model") || "qwen2.5-coder:7b";
 
+// ── Tools ─────────────────────────────────────────────────────────────────
+const TOOLS = [
+  { type:"function", function:{ name:"get_github_repo", description:"Get GitHub repo info: description, language, stars, last push, open issues.", parameters:{ type:"object", properties:{ repo:{type:"string",description:"owner/repo"} }, required:["repo"] } } },
+  { type:"function", function:{ name:"get_github_files", description:"List files/folders at a path in a GitHub repo.", parameters:{ type:"object", properties:{ repo:{type:"string",description:"owner/repo"}, path:{type:"string",description:"folder path, empty for root"} }, required:["repo"] } } },
+  { type:"function", function:{ name:"get_github_file", description:"Read contents of a specific file in a GitHub repo (first 4000 chars).", parameters:{ type:"object", properties:{ repo:{type:"string",description:"owner/repo"}, path:{type:"string",description:"file path e.g. src/App.jsx"} }, required:["repo","path"] } } },
+  { type:"function", function:{ name:"get_github_commits", description:"Get last 10 commits for a GitHub repo.", parameters:{ type:"object", properties:{ repo:{type:"string",description:"owner/repo"} }, required:["repo"] } } },
+  { type:"function", function:{ name:"get_vercel_deployments", description:"Get recent Vercel deployments for a project.", parameters:{ type:"object", properties:{ project:{type:"string",description:"Vercel project name"} }, required:["project"] } } },
+];
+
+async function executeTool(name, args) {
+  const ghToken = localStorage.getItem("hermes_gh_token");
+  const vercelToken = localStorage.getItem("hermes_vercel_token");
+  const ghH = { "Accept":"application/vnd.github+json", ...(ghToken?{"Authorization":"Bearer "+ghToken}:{}) };
+  try {
+    if (name === "get_github_repo") {
+      const r = await fetch(`https://api.github.com/repos/${args.repo}`, {headers:ghH});
+      if (!r.ok) return {error:`GitHub ${r.status}`};
+      const d = await r.json();
+      return {name:d.full_name, description:d.description, language:d.language, stars:d.stargazers_count, default_branch:d.default_branch, last_push:d.pushed_at, open_issues:d.open_issues_count, topics:d.topics};
+    }
+    if (name === "get_github_files") {
+      const r = await fetch(`https://api.github.com/repos/${args.repo}/contents/${args.path||""}`, {headers:ghH});
+      if (!r.ok) return {error:`GitHub ${r.status}`};
+      const d = await r.json();
+      return Array.isArray(d) ? d.map(f=>({name:f.name, type:f.type, size:f.size})) : {error:"not a directory"};
+    }
+    if (name === "get_github_file") {
+      const r = await fetch(`https://api.github.com/repos/${args.repo}/contents/${args.path}`, {headers:ghH});
+      if (!r.ok) return {error:`GitHub ${r.status}`};
+      const d = await r.json();
+      const content = d.content ? atob(d.content.replace(/\n/g,"")) : "";
+      return {path:args.path, content:content.slice(0,4000), truncated:content.length>4000};
+    }
+    if (name === "get_github_commits") {
+      const r = await fetch(`https://api.github.com/repos/${args.repo}/commits?per_page=10`, {headers:ghH});
+      if (!r.ok) return {error:`GitHub ${r.status}`};
+      const d = await r.json();
+      return d.map(c=>({sha:c.sha.slice(0,7), message:c.commit.message.split("\n")[0], author:c.commit.author.name, date:c.commit.author.date}));
+    }
+    if (name === "get_vercel_deployments") {
+      if (!vercelToken) return {error:"No Vercel token. Add in Settings ⚙"};
+      const r = await fetch(`https://api.vercel.com/v6/deployments?projectId=${args.project}&limit=5`, {headers:{"Authorization":"Bearer "+vercelToken}});
+      if (!r.ok) return {error:`Vercel ${r.status}`};
+      const d = await r.json();
+      return (d.deployments||[]).map(dep=>({url:dep.url, state:dep.state, created:dep.createdAt}));
+    }
+    return {error:"Unknown tool: "+name};
+  } catch(e) { return {error:e.message}; }
+}
+
 // ── State ─────────────────────────────────────────────────────────────────
 const DEFAULT_PROJECTS = [
   { id:"baia",  name:"BAIA BackOffice",   emoji:"🏝",  desc:"Resort OS — reception, kitchen, bar, housekeeping", github:"digitalnativepalawan/baia-backoffice",  vercel:"baia-backoffice.vercel.app",  color:"#34d399", images:[], urls:[], codeFiles:[], tasks:[{id:"b1",label:"Sirvoy webhook",note:"live booking sync",done:false},{id:"b2",label:"QR payment",note:"GCash + Vincent API",done:false},{id:"b3",label:"Housekeeping board",done:true},{id:"b4",label:"Kitchen POS",done:true}] },
@@ -1029,6 +1079,17 @@ function saveSettings() {
 window.openSettings=openSettings; window.saveSettings=saveSettings;
 
 // ── Hermes Chat ───────────────────────────────────────────────────────────
+function addToolStep(name, args, result) {
+  const wrap = document.getElementById("chat-messages");
+  const d = document.createElement("div");
+  d.className = "step-log";
+  const argStr = Object.entries(args).map(([k,v])=>`${k}=${v}`).join(", ");
+  const ok = !result?.error;
+  d.innerHTML = `<div class="step-line ${ok?"ok":"warn"}"><span>${ok?"⚡":"✗"}</span><span style="font-weight:600">${name}</span><span style="color:var(--t3)">(${argStr})</span></div>${result?.error?`<div class="step-line warn"><span></span><span>${result.error}</span></div>`:""}`;
+  wrap.appendChild(d);
+  wrap.scrollTop = wrap.scrollHeight;
+}
+
 async function askClaude(messages, sysOverride) {
   const p=proj();
   const open=p?(p.tasks||[]).filter(t=>!t.done).map(t=>t.label+(t.note?" ("+t.note+")":"")).join(", "):"";
@@ -1040,15 +1101,16 @@ async function askClaude(messages, sysOverride) {
 Tone: Direct, sharp, occasionally dry. Give real opinions. Push back when needed. No corporate language.
 
 ${p?`Current project: ${p.name} — ${p.desc||""}\nOpen tasks: ${open||"all done"}\nGitHub: ${p.github||"none"}\nLive: ${p.vercel||"none"}`:""}
-${ghToken?"GitHub API token available — you can suggest fetching repo data.":""}
-${vercelToken?"Vercel API token available — you can suggest checking deployments.":""}
+${ghToken?"GitHub token active — use tools to read repo files, commits, structure.":"No GitHub token — cannot read repos."}
+${vercelToken?"Vercel token active — use tools to check deployments.":""}
 
-When showing code, put the path on the fence header.`;
+When showing code, put the path on the fence header. Use tools proactively when the user asks about the codebase or deployments.`;
 
-  const apiKey=localStorage.getItem("hermes_api_key");
+  const apiKey = localStorage.getItem("hermes_api_key");
 
-  if(apiKey&&apiKey.startsWith("sk-ant-")) {
-    const r=await fetch("https://api.anthropic.com/v1/messages",{
+  // Anthropic path (no tool loop yet — straight chat)
+  if (apiKey && apiKey.startsWith("sk-ant-")) {
+    const r = await fetch("https://api.anthropic.com/v1/messages", {
       method:"POST",
       headers:{"Content-Type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-allow-browser":"true"},
       body:JSON.stringify({model:"claude-sonnet-4-5",max_tokens:2000,system,messages})
@@ -1058,14 +1120,36 @@ When showing code, put the path on the fence header.`;
     return d.content.filter(b=>b.type==="text").map(b=>b.text).join("");
   }
 
-  const r=await fetch(OLLAMA_URL,{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({model:OLLAMA_MODEL,messages:[{role:"system",content:system},...messages],stream:false})
-  });
-  if(!r.ok) throw new Error("Ollama "+r.status);
-  const d=await r.json();
-  return d.choices[0].message.content;
+  // Ollama agentic loop (max 6 iterations)
+  const tools = TOOLS.filter(t => t.function.name.startsWith("get_vercel") ? !!vercelToken : true);
+  let msgs = [...messages];
+
+  for (let i = 0; i < 6; i++) {
+    const r = await fetch(OLLAMA_URL, {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({ model:OLLAMA_MODEL, messages:[{role:"system",content:system},...msgs], tools, stream:false })
+    });
+    if (!r.ok) throw new Error("Ollama "+r.status);
+    const d = await r.json();
+    const msg = d.choices[0].message;
+
+    if (!msg.tool_calls || msg.tool_calls.length === 0) {
+      return msg.content || "";
+    }
+
+    msgs.push({ role:"assistant", content:msg.content||"", tool_calls:msg.tool_calls });
+
+    for (const tc of msg.tool_calls) {
+      let args = tc.function.arguments;
+      if (typeof args === "string") { try { args = JSON.parse(args); } catch { args = {}; } }
+      const result = await executeTool(tc.function.name, args);
+      addToolStep(tc.function.name, args, result);
+      msgs.push({ role:"tool", tool_call_id:tc.id, content:JSON.stringify(result) });
+    }
+  }
+
+  return "Reached max tool steps.";
 }
 
 function setModel(m) {
