@@ -1,0 +1,16 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Optional custom colors to match demo */
+:root {
+  --background: #0f172a; /* slate-900 */
+  --foreground: #e2e8f0; /* slate-200 */
+  --muted: #334155; /* slate-600 */
+  --accent: #22d3ee; /* cyan-400 */
+}
+
+/* Apply colors */
+body {
+  @apply bg-background text-foreground;
+}
