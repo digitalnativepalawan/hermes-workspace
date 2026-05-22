@@ -1,6 +1,8 @@
+@tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* Scope base resets to #root so workspace CSS stays intact */
 #root {
   --background: #0f172a;
   --foreground: #e2e8f0;
@@ -20,27 +22,15 @@
   color: var(--muted);
 }
 
-#root .corner {
-  border-radius: 2px;
-}
+#root .corner { border-radius: 2px; }
 
 #root .c1,
 #root .c2 {
   position: absolute;
   width: 6px;
   height: 6px;
-  border-color: theme('colors.accent');
+  border-color: #22d3ee;
   border-style: solid;
 }
-
-#root .c1 {
-  top: -1px;
-  left: -1px;
-  border-width: 1px 0 0 1px;
-}
-
-#root .c2 {
-  bottom: -1px;
-  right: -1px;
-  border-width: 0 1px 1px 0;
-}
+#root .c1 { top: -1px; left: -1px; border-width: 1px 0 0 1px; }
+#root .c2 { bottom: -1px; right: -1px; border-width: 0 1px 1px 0; }
